@@ -23,7 +23,7 @@ class Rating extends AbstractApi implements RatingInterface
             $params['clan'] = $clan;
         }
 
-        if ($league !== null && $league !== RatingLeague::NONE) {
+        if ($league instanceof \Hyperplural\WarfaceSdk\Enum\RatingLeague && $league !== RatingLeague::NONE) {
             $params['league'] = $league->value;
         }
 
@@ -34,7 +34,7 @@ class Rating extends AbstractApi implements RatingInterface
     {
         $params = [];
 
-        if ($class !== null && $class !== GameClass::NONE) {
+        if ($class instanceof \Hyperplural\WarfaceSdk\Enum\GameClass && $class !== GameClass::NONE) {
             $params['class'] = $class->value;
         }
 
