@@ -6,6 +6,7 @@ namespace Hyperplural\WarfaceSdk\HttpClient\Message;
 
 use JsonException;
 use Psr\Http\Message\ResponseInterface;
+use Hyperplural\WarfaceSdk\Exception\ApiResponseErrorException;
 
 use function json_decode;
 
@@ -24,12 +25,20 @@ final class ResponseMediator implements ResponseMediatorInterface
 
     /**
      * @return array<string|int, mixed>
-     * @throws JsonException
+     * @throws ApiResponseErrorException
      */
     public function getBodyContentsDecode(): array
     {
         $body = $this->getResponse()->getBody()->getContents();
 
-        return (array)json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        try {
+            return (array)json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            throw new ApiResponseErrorException(
+                'Warface API returned invalid JSON',
+                $this->response->getStatusCode(),
+                $exception
+            );
+        }
     }
 }

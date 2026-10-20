@@ -57,6 +57,19 @@ final class WarfaceClientExceptionPluginTest extends TestCase
         (new $this->apiClass($client))->stat('');
     }
 
+    public function testBadRequestWithMalformedJsonFallsBackToRawBody(): void
+    {
+        $this->expectException(BadRequestException::class);
+        $this->expectExceptionMessage('{"message":');
+
+        $this->apiClass = \Hyperplural\WarfaceSdk\Api\User::class;
+        $mock = new \Http\Mock\Client();
+        $mock->addResponse(new Response(400, ['Content-Type' => 'application/json'], '{"message":'));
+
+        $client = Client::createWithHttpClient($mock);
+        (new $this->apiClass($client))->stat('');
+    }
+
     public function testNotFoundException(): void
     {
         $this->expectException(NotFoundException::class);

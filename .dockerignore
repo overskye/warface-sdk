@@ -1,0 +1,15 @@
+.git/
+.github/
+.vscode/
+.idea/
+vendor/
+node_modules/
+build/
+coverage/
+.phpunit.cache/
+.phpunit.result.cache
+*.md
+LICENSE
+docs/
+.env
+.env.*

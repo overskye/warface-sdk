@@ -27,7 +27,7 @@ interface RatingInterface
      * If only the $league parameter is used, the server will return the top 100 for that league.
      *
      * @return array<string|int, mixed>
-     * @see LeagueEnum
+     * @see RatingLeague
      * @throws WarfaceApiException
      */
     public function monthly(?string $clan = null, ?RatingLeague $league = null, int $page = 0): array;

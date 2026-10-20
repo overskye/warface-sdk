@@ -8,8 +8,6 @@ use Hyperplural\WarfaceSdk\Enum\EntityList;
 use Hyperplural\WarfaceSdk\Enum\GameClass;
 use Hyperplural\WarfaceSdk\Enum\RatingLeague;
 
-use function compact;
-
 class Rating extends AbstractApi implements RatingInterface
 {
     public function clan(): array
@@ -19,16 +17,28 @@ class Rating extends AbstractApi implements RatingInterface
 
     public function monthly(?string $clan = null, ?RatingLeague $league = null, int $page = 0): array
     {
-        $league = ($league ?? RatingLeague::NONE)->value;
+        $params = ['page' => $page];
 
-        return $this->getByMethod(__FUNCTION__, ['clan' => $clan, 'league' => $league, 'page' => $page]);
+        if ($clan !== null && $clan !== '') {
+            $params['clan'] = $clan;
+        }
+
+        if ($league instanceof \Hyperplural\WarfaceSdk\Enum\RatingLeague && $league !== RatingLeague::NONE) {
+            $params['league'] = $league->value;
+        }
+
+        return $this->getByMethod(__FUNCTION__, $params);
     }
 
     public function top100(?GameClass $class = null): array
     {
-        $class = ($class ?? GameClass::NONE)->value;
+        $params = [];
 
-        return $this->getByMethod(__FUNCTION__, ['class' => $class]);
+        if ($class instanceof \Hyperplural\WarfaceSdk\Enum\GameClass && $class !== GameClass::NONE) {
+            $params['class'] = $class->value;
+        }
+
+        return $this->getByMethod(__FUNCTION__, $params);
     }
 
     protected function entity(): EntityList

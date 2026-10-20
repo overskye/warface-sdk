@@ -6,14 +6,14 @@ namespace Hyperplural\WarfaceSdk\Tests\Http;
 
 use GuzzleHttp\Psr7\Response;
 use Hyperplural\WarfaceSdk\Client;
+use Hyperplural\WarfaceSdk\Exception\ApiResponseErrorException;
 use Hyperplural\WarfaceSdk\Tests\TestCase;
-use JsonException;
 
 final class ResponseMediatorTest extends TestCase
 {
     public function testThrowsOnInvalidJson(): void
     {
-        $this->expectException(JsonException::class);
+        $this->expectException(ApiResponseErrorException::class);
 
         $this->apiClass = \Hyperplural\WarfaceSdk\Api\User::class;
         $mock = new \Http\Mock\Client();

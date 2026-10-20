@@ -39,9 +39,10 @@ final class Client
 {
     private readonly ClientBuilder $httpClientBuilder;
 
-    public function __construct(ClientBuilder $httpClientBuilder = null)
+    public function __construct(?ClientBuilder $httpClientBuilder = null)
     {
-        $this->httpClientBuilder = $builder = $httpClientBuilder ?? new ClientBuilder();
+        $builder = clone ($httpClientBuilder ?? new ClientBuilder());
+        $this->httpClientBuilder = $builder;
 
         // Set API host (CIS)
         $builder->addPlugin(new AddHostPlugin($this->makeHostUri(HostList::CIS)));

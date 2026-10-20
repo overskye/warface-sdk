@@ -59,11 +59,21 @@ $client = Client::createWithHttpClient(new HttplugClient());
 
 ## Testing
 
+Docker with Compose v2 is required. The test container installs the development dependencies and runs PHPStan followed by PHPUnit:
+
 ```bash
-composer test
+./docker/test.sh
 ```
 
-Unit tests rely on JSON fixtures and a mock HTTP client — no network required. CI enforces 100% line coverage.
+To run one check, pass its Composer script to the helper:
+
+```bash
+./docker/test.sh composer test:unit
+./docker/test.sh composer test:types
+./docker/test.sh composer test:cs
+```
+
+The source tree is mounted into the container; Composer dependencies and its download cache persist in Docker volumes. Unit tests rely on JSON fixtures and a mock HTTP client — no Warface API network access is required. CI enforces 100% line coverage.
 
 ## License
 
