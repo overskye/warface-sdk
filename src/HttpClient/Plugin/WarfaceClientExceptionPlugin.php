@@ -14,16 +14,19 @@ use Hyperplural\WarfaceSdk\Exception\BadRequestException;
 use Hyperplural\WarfaceSdk\Exception\InternalServerErrorException;
 use Hyperplural\WarfaceSdk\Exception\NotFoundException;
 use Hyperplural\WarfaceSdk\Exception\WarfaceApiException;
-use Hyperplural\WarfaceSdk\HttpClient\Message\ResponseMediator;
 use JsonException;
 
+use function is_array;
+use function is_string;
+use function json_decode;
 use function str_contains;
+
+use const JSON_THROW_ON_ERROR;
 
 final class WarfaceClientExceptionPlugin implements Plugin
 {
     /**
      * @throws WarfaceApiException
-     * @throws JsonException
      */
     public function handleRequest(RequestInterface $request, callable $next, callable $first): Promise
     {
@@ -35,13 +38,22 @@ final class WarfaceClientExceptionPlugin implements Plugin
                     break;
                 case StatusCodeInterface::STATUS_BAD_REQUEST:
                     $message = null;
+                    $bodyContents = $response->getBody()->__toString();
+
                     if (str_contains($response->getHeaderLine('Content-Type'), 'application/json')) {
-                        /** @var array{message: string, code: int} $body */
-                        $body = (new ResponseMediator($response))->getBodyContentsDecode();
-                        $message = $body['message'];
+                        try {
+                            /** @var mixed $body */
+                            $body = json_decode($bodyContents, true, 512, JSON_THROW_ON_ERROR);
+
+                            if (is_array($body) && is_string($body['message'] ?? null)) {
+                                $message = $body['message'];
+                            }
+                        } catch (JsonException) {
+                            // Fall back to the raw response body for malformed JSON errors.
+                        }
                     }
 
-                    throw new BadRequestException($message ?? $response->getBody()->__toString(), $status);
+                    throw new BadRequestException($message ?? $bodyContents, $status);
                 case StatusCodeInterface::STATUS_NOT_FOUND:
                     throw new NotFoundException('Not Found', $status);
                 case StatusCodeInterface::STATUS_INTERNAL_SERVER_ERROR:

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hyperplural\WarfaceSdk\HttpClient\Message;
 
 use Psr\Http\Message\ResponseInterface;
+use Hyperplural\WarfaceSdk\Exception\ApiResponseErrorException;
 
 interface ResponseMediatorInterface
 {
@@ -12,6 +13,7 @@ interface ResponseMediatorInterface
 
     /**
      * @return array<string|int, mixed>
+     * @throws ApiResponseErrorException
      */
     public function getBodyContentsDecode(): array;
 }
