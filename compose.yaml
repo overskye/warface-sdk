@@ -1,0 +1,27 @@
+services:
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    init: true
+    environment:
+      HOME: /tmp/composer-home
+      COMPOSER_HOME: /tmp/composer-home
+      COMPOSER_CACHE_DIR: /tmp/composer-cache
+    volumes:
+      - type: bind
+        source: .
+        target: /app
+      - type: volume
+        source: composer_vendor
+        target: /app/vendor
+      - type: volume
+        source: composer_cache
+        target: /tmp/composer-cache
+    command: ["composer", "test"]
+
+volumes:
+  composer_vendor:
+  composer_cache:
