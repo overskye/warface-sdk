@@ -22,7 +22,7 @@ final class BypassTimeoutResponsePluginTest extends TestCase
         $client->user()->stat('A B');
         $client->user()->stat('A B');
 
-        $queries = array_map(static fn ($request) => $request->getUri()->getQuery(), $mock->getRequests());
+        $queries = array_map(static fn ($request): string => $request->getUri()->getQuery(), $mock->getRequests());
         self::assertCount(2, $queries);
         self::assertStringContainsString('name=A%20B%3C', $queries[0]);
         parse_str($queries[0], $first);
