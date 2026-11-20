@@ -7,6 +7,7 @@ namespace Hyperplural\WarfaceSdk\Api;
 use Hyperplural\WarfaceSdk\Enum\GameClass;
 use Hyperplural\WarfaceSdk\Enum\RatingLeague;
 use Hyperplural\WarfaceSdk\Exception\WarfaceApiException;
+use InvalidArgumentException;
 
 interface RatingInterface
 {
@@ -29,6 +30,7 @@ interface RatingInterface
      * @return array<string|int, mixed>
      * @see RatingLeague
      * @throws WarfaceApiException
+     * @throws InvalidArgumentException If the page is negative.
      */
     public function monthly(?string $clan = null, ?RatingLeague $league = null, int $page = 0): array;
 

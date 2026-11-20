@@ -25,7 +25,7 @@ use Hyperplural\WarfaceSdk\Enum\EntityList;
 use Hyperplural\WarfaceSdk\Enum\HostList;
 use Hyperplural\WarfaceSdk\Exception\InvalidApiEndpointException;
 use Hyperplural\WarfaceSdk\HttpClient\ClientBuilder;
-use Hyperplural\WarfaceSdk\HttpClient\Plugin\BypassTimeoutResponsePlugin;
+use Hyperplural\WarfaceSdk\HttpClient\Plugin\RateLimitWorkaroundPlugin;
 use Hyperplural\WarfaceSdk\HttpClient\Plugin\WarfaceClientExceptionPlugin;
 
 /**
@@ -48,7 +48,7 @@ final class Client
         $builder->addPlugin(new AddHostPlugin($this->makeHostUri(HostList::CIS)));
 
         // Always bypass API timeout logic by default
-        $builder->addPlugin(new BypassTimeoutResponsePlugin());
+        $builder->addPlugin(new RateLimitWorkaroundPlugin());
 
         $builder->addPlugin(
             new HeaderDefaultsPlugin([

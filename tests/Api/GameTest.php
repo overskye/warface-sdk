@@ -17,7 +17,7 @@ final class GameTest extends TestCase
 
         /** @var array<int, array<string, mixed>> $list */
         $list = $api->missions();
-        $element = $this->getRandomElement($list);
+        $element = $list[0] ?? null;
 
         $this->assertIsArray($element);
         $this->assertArrayHasKey('game_mode', $element);

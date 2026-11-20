@@ -12,11 +12,15 @@ static:phpstan-phpcs-rector:
   stage: static
   image: php:8.3-cli
   before_script:
-    - apt-get update && apt-get install -y git unzip > /dev/null
-    - php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-    - php composer-setup.php --install-dir=/usr/local/bin --filename=composer >/dev/null
+    - apt-get update && apt-get install -y curl git unzip > /dev/null
+    - curl -fsSLo /tmp/composer-installer.php https://getcomposer.org/installer
+    - curl -fsSLo /tmp/composer-installer.sig https://composer.github.io/installer.sig
+    - php -r "if (!hash_equals(trim(file_get_contents('/tmp/composer-installer.sig')), hash_file('sha384', '/tmp/composer-installer.php'))) { fwrite(STDERR, 'Composer installer signature mismatch' . PHP_EOL); exit(1); }"
+    - php /tmp/composer-installer.php --install-dir=/usr/local/bin --filename=composer >/dev/null
     - composer install --no-interaction --no-progress
   script:
+    - composer validate --strict
+    - composer audit --locked
     - composer run -v test:types
     - composer run -v test:cs
     - composer run -v rector:dry
@@ -26,9 +30,11 @@ tests:phpunit:
   stage: test
   image: php:8.3-cli
   before_script:
-    - apt-get update && apt-get install -y git unzip > /dev/null
-    - php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-    - php composer-setup.php --install-dir=/usr/local/bin --filename=composer >/dev/null
+    - apt-get update && apt-get install -y curl git unzip > /dev/null
+    - curl -fsSLo /tmp/composer-installer.php https://getcomposer.org/installer
+    - curl -fsSLo /tmp/composer-installer.sig https://composer.github.io/installer.sig
+    - php -r "if (!hash_equals(trim(file_get_contents('/tmp/composer-installer.sig')), hash_file('sha384', '/tmp/composer-installer.php'))) { fwrite(STDERR, 'Composer installer signature mismatch' . PHP_EOL); exit(1); }"
+    - php /tmp/composer-installer.php --install-dir=/usr/local/bin --filename=composer >/dev/null
     - pecl install xdebug >/dev/null && docker-php-ext-enable xdebug
     - composer install --no-interaction --no-progress
     - export XDEBUG_MODE=coverage

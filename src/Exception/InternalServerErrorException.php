@@ -4,6 +4,6 @@ declare(strict_types=1);
 
 namespace Hyperplural\WarfaceSdk\Exception;
 
-final class InternalServerErrorException extends WarfaceApiException
+final class InternalServerErrorException extends ServerException
 {
 }

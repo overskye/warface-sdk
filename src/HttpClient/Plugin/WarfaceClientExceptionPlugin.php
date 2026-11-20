@@ -13,6 +13,8 @@ use Hyperplural\WarfaceSdk\Exception\ApiResponseErrorException;
 use Hyperplural\WarfaceSdk\Exception\BadRequestException;
 use Hyperplural\WarfaceSdk\Exception\InternalServerErrorException;
 use Hyperplural\WarfaceSdk\Exception\NotFoundException;
+use Hyperplural\WarfaceSdk\Exception\RateLimitException;
+use Hyperplural\WarfaceSdk\Exception\ServerException;
 use Hyperplural\WarfaceSdk\Exception\WarfaceApiException;
 use JsonException;
 
@@ -32,10 +34,11 @@ final class WarfaceClientExceptionPlugin implements Plugin
     {
         return $next($request)->then(static function (ResponseInterface $response): ResponseInterface {
             $status = $response->getStatusCode();
+            if ($status >= 200 && $status < 300) {
+                return $response;
+            }
+
             switch ($status) {
-                case StatusCodeInterface::STATUS_OK:
-                    // Do nothing
-                    break;
                 case StatusCodeInterface::STATUS_BAD_REQUEST:
                     $message = null;
                     $bodyContents = $response->getBody()->__toString();
@@ -56,13 +59,20 @@ final class WarfaceClientExceptionPlugin implements Plugin
                     throw new BadRequestException($message ?? $bodyContents, $status);
                 case StatusCodeInterface::STATUS_NOT_FOUND:
                     throw new NotFoundException('Not Found', $status);
+                case 429:
+                    throw new RateLimitException(
+                        'Too Many Requests',
+                        $status,
+                        $response->hasHeader('Retry-After') ? $response->getHeaderLine('Retry-After') : null
+                    );
                 case StatusCodeInterface::STATUS_INTERNAL_SERVER_ERROR:
                     throw new InternalServerErrorException('Internal Server Error', $status);
                 default:
+                    if ($status >= 500 && $status < 600) {
+                        throw new ServerException('Server error from API', $status);
+                    }
                     throw new ApiResponseErrorException('Unknown error from API', $status);
             }
-
-            return $response;
         });
     }
 }

@@ -7,6 +7,7 @@ namespace Hyperplural\WarfaceSdk\HttpClient\Message;
 use JsonException;
 use Psr\Http\Message\ResponseInterface;
 use Hyperplural\WarfaceSdk\Exception\ApiResponseErrorException;
+use RuntimeException;
 
 use function json_decode;
 
@@ -29,10 +30,29 @@ final class ResponseMediator implements ResponseMediatorInterface
      */
     public function getBodyContentsDecode(): array
     {
-        $body = $this->getResponse()->getBody()->getContents();
+        $stream = $this->response->getBody();
 
         try {
-            return (array)json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+            if ($stream->isSeekable()) {
+                $stream->rewind();
+            } elseif ($stream->tell() !== 0) {
+                throw new ApiResponseErrorException(
+                    'Warface API response body was already partially consumed',
+                    $this->response->getStatusCode()
+                );
+            }
+
+            $body = $stream->getContents();
+        } catch (RuntimeException $exception) {
+            throw new ApiResponseErrorException(
+                'Failed to read Warface API response body',
+                $this->response->getStatusCode(),
+                $exception
+            );
+        }
+
+        try {
+            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
             throw new ApiResponseErrorException(
                 'Warface API returned invalid JSON',
@@ -40,5 +60,14 @@ final class ResponseMediator implements ResponseMediatorInterface
                 $exception
             );
         }
+
+        if (!is_array($decoded)) {
+            throw new ApiResponseErrorException(
+                'Warface API returned an unexpected JSON structure',
+                $this->response->getStatusCode()
+            );
+        }
+
+        return $decoded;
     }
 }

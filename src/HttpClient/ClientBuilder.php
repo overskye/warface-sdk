@@ -22,6 +22,7 @@ final class ClientBuilder
      * @var array<int, Plugin>
      */
     private array $plugins = [];
+    private ?HttpMethodsClientInterface $builtClient = null;
 
     public function __construct(?ClientInterface $httpClient = null, ?RequestFactoryInterface $requestFactory = null)
     {
@@ -31,13 +32,15 @@ final class ClientBuilder
 
     public function getHttpClient(): HttpMethodsClientInterface
     {
-        $client = (new PluginClientFactory())->createClient($this->httpClient, $this->plugins);
-
-        return new HttpMethodsClient($client, $this->requestFactory);
+        return $this->builtClient ??= new HttpMethodsClient(
+            (new PluginClientFactory())->createClient($this->httpClient, $this->plugins),
+            $this->requestFactory
+        );
     }
 
     public function addPlugin(Plugin $plugin): void
     {
         $this->plugins[] = $plugin;
+        $this->builtClient = null;
     }
 }

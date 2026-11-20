@@ -13,6 +13,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends unzip; \
+    pecl install pcov-1.0.12; \
+    docker-php-ext-enable pcov; \
     groupadd --gid 10001 test-runner; \
     useradd --uid 10001 --gid test-runner --create-home --shell /usr/sbin/nologin test-runner; \
     mkdir -p /app/vendor /tmp/composer-home /tmp/composer-cache; \
