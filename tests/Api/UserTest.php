@@ -58,7 +58,7 @@ final class UserTest extends TestCase
         $name = 'ГрозовоеОблако';
         /** @var array<int, array<string, mixed>> $list */
         $list = $api->achievements($name);
-        $element = $this->getRandomElement($list);
+        $element = $list[0] ?? null;
 
         $this->assertIsArray($element);
         $this->assertArrayHasKey('achievement_id', $element);

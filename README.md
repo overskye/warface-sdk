@@ -1,79 +1,151 @@
 # Warface SDK (PHP)
 
-![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)
-
-Fast, PSR‑18 HTTP‑client agnostic SDK for the public Warface API. Requires PHP >= 8.1.
+A lightweight client for the Warface API. It requires PHP 8.1 or newer, a
+PSR-18 HTTP client and a PSR-17 HTTP factory. HTTP discovery and HTTPlug are
+used to build the default client.
 
 ## Installation
 
-```bash
-composer require hyperplural/warface-sdk guzzlehttp/guzzle:^7 http-interop/http-factory-guzzle:^1
-```
+Install the SDK and a PSR-18 client and PSR-17 factory. For example, Guzzle 7
+provides both:
 
-Decoupled from any specific HTTP client via [HTTPlug](https://httplug.io/).
+```bash
+composer require hyperplural/warface-sdk guzzlehttp/guzzle:^7
+```
 
 ## Quickstart
 
 ```php
+<?php
+
 use Hyperplural\WarfaceSdk\Client;
-use Hyperplural\WarfaceSdk\Enum\RatingLeague;
 use Hyperplural\WarfaceSdk\Enum\GameClass;
+use Hyperplural\WarfaceSdk\Enum\RatingLeague;
 
 $client = new Client();
 
-// Player stats
-$stat = $client->user()->stat('Nickname');
-
-// Player achievements
-$achievements = $client->user()->achievements('Nickname');
-
-// Achievement catalog
-$catalog = $client->achievement()->catalog();
-
-// Clan info
-$clan = $client->clan()->members('ClanName');
-
-// Missions
+$stats = $client->user()->stat('Nickname');
+$playerAchievements = $client->user()->achievements('Nickname');
+$achievementCatalog = $client->achievement()->catalog();
+$clanMembers = $client->clan()->members('ClanName');
 $missions = $client->game()->missions();
-
-// Ratings
-$monthly = $client->rating()->monthly('', RatingLeague::ELITE);
+$clanRating = $client->rating()->clan();
+$monthlyRating = $client->rating()->monthly(null, RatingLeague::ELITE, 0);
 $top100 = $client->rating()->top100(GameClass::MEDIC);
 ```
 
-## Custom HTTP client
+Results are PHP arrays decoded from API JSON objects or arrays. The SDK does
+not impose a schema on the remote API response. Negative monthly rating page
+numbers are rejected before a request is sent.
 
-Provide your own PSR‑18 client (e.g., Symfony HttpClient with HTTPlug adapter):
+## HTTP client and timeouts
+
+`Client::createWithHttpClient()` accepts any PSR-18 client. PSR-18 does not
+define timeout configuration; set connection and request timeouts on the
+chosen implementation. For example, with Guzzle:
 
 ```php
-use Hyperplural\WarfaceSdk\Client;
-use Symfony\Component\HttpClient\HttplugClient;
+<?php
 
-$client = Client::createWithHttpClient(new HttplugClient());
+use GuzzleHttp\Client as HttpClient;
+use Hyperplural\WarfaceSdk\Client;
+
+$http = new HttpClient([
+    'connect_timeout' => 3.0,
+    'timeout' => 10.0,
+]);
+$client = Client::createWithHttpClient($http);
 ```
 
-## References
+The defaults of a discovered HTTP client depend on its implementation. For
+more control, pass a `ClientBuilder` with a PSR-18 client and, optionally, a
+PSR-17 request factory to `new Client($builder)`. Plugins added to the builder
+run in their configured order before the SDK's default plugins. Configure any
+retry policy in the transport or a custom plugin: the SDK does not retry by
+default. Keep attempts bounded, respect `Retry-After`, and use backoff and
+jitter where appropriate.
 
-- Official docs: https://ru.warface.com/wiki/index.php/API
-- WFTS (legacy application) as an additional reference source.
+## Errors
+
+All SDK exceptions extend `WarfaceApiException`. HTTP 400 and 404 produce
+`BadRequestException` and `NotFoundException`; HTTP 429 produces
+`RateLimitException`; HTTP 500 produces `InternalServerErrorException`, and
+other 5xx responses produce `ServerException`. Transport failures produce
+`TransportException` with the original exception available through
+`getPrevious()`. Malformed JSON produces `ApiResponseErrorException` with the
+original `JsonException` as its cause. Other unexpected JSON structures and
+statuses also produce `ApiResponseErrorException`.
+
+Passing a negative page to `rating()->monthly()` throws PHP's
+`InvalidArgumentException` before sending a request. This validation exception
+does not extend `WarfaceApiException` and must be handled separately.
+
+```php
+<?php
+
+use Hyperplural\WarfaceSdk\Client;
+use Hyperplural\WarfaceSdk\Exception\RateLimitException;
+use Hyperplural\WarfaceSdk\Exception\WarfaceApiException;
+
+$client = new Client();
+
+try {
+    $stats = $client->user()->stat('Nickname');
+} catch (RateLimitException $exception) {
+    $retryAfter = $exception->getRetryAfter(); // Header value or null.
+    // Apply a bounded retry policy appropriate for your application.
+} catch (WarfaceApiException $exception) {
+    // Handle the failure in your application.
+}
+```
+
+## Warface rate-limit workaround
+
+The SDK applies `RateLimitWorkaroundPlugin` by default to every API request.
+It preserves an existing workaround for repeated identical requests, which
+may otherwise wait for a long time or time out. It appends `<` followed by
+64 random hexadecimal characters to a non-empty `name` value, except `"0"`.
+When `name` is absent, empty, `"0"`, or not a string, the parameter is set to
+the suffix alone. It parses and rebuilds the query using PHP's `parse_str()`
+and RFC 3986 encoding, so PHP's rules for repeated and transformed parameter
+names apply. This also applies to endpoints that have no `name` parameter of
+their own. The workaround describes existing SDK behavior and does not imply a
+guarantee about how the Warface server handles requests.
+
+The old `BypassTimeoutResponsePlugin` name remains available for compatibility
+and is deprecated in favor of `RateLimitWorkaroundPlugin`.
 
 ## Testing
 
-Docker with Compose v2 is required. The test container installs the development dependencies and runs PHPStan followed by PHPUnit:
+Unit tests use fixtures and a mock HTTP client; they do not call Warface API.
+Run the checks locally with Composer or with Docker and Compose v2:
 
 ```bash
-./docker/test.sh
+composer validate --strict
+composer audit
+composer run test:types
+composer run test:cs
+composer run test:unit
+composer run rector:dry
+composer run test:coverage
+composer run coverage:check
+
+# Alternatively, use the container for individual commands:
+./docker/test.sh composer run test:unit
+./docker/test.sh composer run test:coverage
+./docker/test.sh composer run coverage:check
 ```
 
-To run one check, pass its Composer script to the helper:
+The container installs dependencies in a Docker volume and includes PCOV for
+coverage. CI enforces the existing 100% line-coverage threshold.
 
-```bash
-./docker/test.sh composer test:unit
-./docker/test.sh composer test:types
-./docker/test.sh composer test:cs
-```
+## Compatibility and releases
 
-The source tree is mounted into the container; Composer dependencies and its download cache persist in Docker volumes. Unit tests rely on JSON fixtures and a mock HTTP client — no Warface API network access is required. CI enforces 100% line coverage.
+The SDK uses semantic versioning. Consult release notes before upgrading across
+a major version. Stricter response validation, new exception types and rejected
+negative pages can affect applications that relied on previous behavior.
+Responses and server-side limits remain subject to changes in Warface API.
+For API details, see the [Warface API documentation](https://ru.warface.com/wiki/index.php/API).
 
 ## License
 

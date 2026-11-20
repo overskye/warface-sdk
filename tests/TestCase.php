@@ -9,9 +9,7 @@ use Hyperplural\WarfaceSdk\Client;
 use Http\Mock\Client as MockHttpClient;
 use GuzzleHttp\Psr7\Response;
 
-use function array_rand;
 use function file_get_contents;
-use function is_string;
 
 abstract class TestCase extends \PHPUnit\Framework\TestCase
 {
@@ -39,23 +37,5 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
         $client = Client::createWithHttpClient($mock);
 
         return new $this->apiClass($client);
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $data
-     * @return array<string, mixed>|null
-     */
-    /**
-     * @template TValue
-     * @param array<int, TValue> $data
-     * @return TValue|null
-     */
-    protected function getRandomElement(array $data): mixed
-    {
-        if ($data === []) {
-            return null;
-        }
-
-        return $data[array_rand($data)] ?? null;
     }
 }

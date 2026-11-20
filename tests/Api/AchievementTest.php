@@ -17,7 +17,7 @@ final class AchievementTest extends TestCase
 
         /** @var array<int, array<string, mixed>> $list */
         $list = $api->catalog();
-        $element = $this->getRandomElement($list);
+        $element = $list[0] ?? null;
 
         $this->assertIsArray($element);
         $this->assertArrayHasKey('id', $element);

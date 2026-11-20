@@ -7,6 +7,7 @@ namespace Hyperplural\WarfaceSdk\Api;
 use Hyperplural\WarfaceSdk\Enum\EntityList;
 use Hyperplural\WarfaceSdk\Enum\GameClass;
 use Hyperplural\WarfaceSdk\Enum\RatingLeague;
+use InvalidArgumentException;
 
 class Rating extends AbstractApi implements RatingInterface
 {
@@ -17,14 +18,19 @@ class Rating extends AbstractApi implements RatingInterface
 
     public function monthly(?string $clan = null, ?RatingLeague $league = null, int $page = 0): array
     {
+        if ($page < 0) {
+            throw new InvalidArgumentException('Page must not be negative');
+        }
+
         $params = ['page' => $page];
 
         if ($clan !== null && $clan !== '') {
             $params['clan'] = $clan;
         }
 
-        if ($league instanceof \Hyperplural\WarfaceSdk\Enum\RatingLeague && $league !== RatingLeague::NONE) {
-            $params['league'] = $league->value;
+        $leagueValue = $league?->value;
+        if ($leagueValue !== null && $leagueValue !== RatingLeague::NONE->value) {
+            $params['league'] = $leagueValue;
         }
 
         return $this->getByMethod(__FUNCTION__, $params);
@@ -34,8 +40,9 @@ class Rating extends AbstractApi implements RatingInterface
     {
         $params = [];
 
-        if ($class instanceof \Hyperplural\WarfaceSdk\Enum\GameClass && $class !== GameClass::NONE) {
-            $params['class'] = $class->value;
+        $classValue = $class?->value;
+        if ($classValue !== null && $classValue !== GameClass::NONE->value) {
+            $params['class'] = $classValue;
         }
 
         return $this->getByMethod(__FUNCTION__, $params);

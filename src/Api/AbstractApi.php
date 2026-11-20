@@ -8,7 +8,7 @@ use Fig\Http\Message\RequestMethodInterface;
 use Psr\Http\Client\ClientExceptionInterface;
 use Hyperplural\WarfaceSdk\Client;
 use Hyperplural\WarfaceSdk\Enum\EntityList;
-use Hyperplural\WarfaceSdk\Exception\ApiResponseErrorException;
+use Hyperplural\WarfaceSdk\Exception\TransportException;
 use Hyperplural\WarfaceSdk\Exception\WarfaceApiException;
 use Hyperplural\WarfaceSdk\HttpClient\Message\ResponseMediator;
 use Hyperplural\WarfaceSdk\HttpClient\Message\ResponseMediatorInterface;
@@ -55,11 +55,8 @@ abstract class AbstractApi
             return new ResponseMediator(
                 $this->client->getHttpClient()->send($method, $uri)
             );
-        // Transport-level errors are turned into a domain exception.
-        // @codeCoverageIgnoreStart
         } catch (ClientExceptionInterface $e) {
-            throw new ApiResponseErrorException($e->getMessage(), $e->getCode());
+            throw new TransportException($e->getMessage(), 0, $e);
         }
-        // @codeCoverageIgnoreEnd
     }
 }

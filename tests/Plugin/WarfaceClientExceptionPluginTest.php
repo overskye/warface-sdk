@@ -10,10 +10,95 @@ use Hyperplural\WarfaceSdk\Exception\ApiResponseErrorException;
 use Hyperplural\WarfaceSdk\Exception\BadRequestException;
 use Hyperplural\WarfaceSdk\Exception\InternalServerErrorException;
 use Hyperplural\WarfaceSdk\Exception\NotFoundException;
+use Hyperplural\WarfaceSdk\Exception\RateLimitException;
+use Hyperplural\WarfaceSdk\Exception\ServerException;
 use Hyperplural\WarfaceSdk\Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class WarfaceClientExceptionPluginTest extends TestCase
 {
+    /** @return iterable<string, array{int, class-string<\Throwable>}> */
+    public static function errorStatuses(): iterable
+    {
+        yield 'bad request' => [400, BadRequestException::class];
+        yield 'not found' => [404, NotFoundException::class];
+        yield 'rate limit' => [429, RateLimitException::class];
+        yield 'internal server error' => [500, InternalServerErrorException::class];
+        yield 'bad gateway' => [502, ServerException::class];
+        yield 'service unavailable' => [503, ServerException::class];
+        yield 'unexpected status' => [418, ApiResponseErrorException::class];
+    }
+
+    /** @param class-string<\Throwable> $expected */
+    #[DataProvider('errorStatuses')]
+    public function testMapsStatusAndPreservesCode(int $status, string $expected): void
+    {
+        $mock = new \Http\Mock\Client();
+        $mock->addResponse(new Response($status, [], '{}'));
+
+        try {
+            Client::createWithHttpClient($mock)->game()->missions();
+            self::fail('Expected an HTTP error');
+        } catch (\Throwable $exception) {
+            self::assertInstanceOf($expected, $exception);
+            self::assertSame($status, $exception->getCode());
+        }
+    }
+
+    public function testRateLimitExposesRetryAfter(): void
+    {
+        $mock = new \Http\Mock\Client();
+        $mock->addResponse(new Response(429, ['Retry-After' => 'Wed, 21 Oct 2015 07:28:00 GMT']));
+
+        try {
+            Client::createWithHttpClient($mock)->game()->missions();
+            self::fail('Expected a rate limit error');
+        } catch (RateLimitException $exception) {
+            self::assertInstanceOf(ApiResponseErrorException::class, $exception);
+            self::assertSame('Wed, 21 Oct 2015 07:28:00 GMT', $exception->getRetryAfter());
+        }
+    }
+
+    public function testRateLimitWithoutRetryAfter(): void
+    {
+        $mock = new \Http\Mock\Client();
+        $mock->addResponse(new Response(429));
+
+        try {
+            Client::createWithHttpClient($mock)->game()->missions();
+            self::fail('Expected a rate limit error');
+        } catch (RateLimitException $exception) {
+            self::assertNull($exception->getRetryAfter());
+        }
+    }
+
+    public function testRateLimitExposesNumericRetryAfterWithoutConversion(): void
+    {
+        $mock = new \Http\Mock\Client();
+        $mock->addResponse(new Response(429, ['Retry-After' => '120']));
+
+        try {
+            Client::createWithHttpClient($mock)->game()->missions();
+            self::fail('Expected a rate limit error');
+        } catch (RateLimitException $exception) {
+            self::assertSame('120', $exception->getRetryAfter());
+        }
+    }
+
+    public function testPassesOtherSuccessfulStatusesToResponseDecoding(): void
+    {
+        $mock = new \Http\Mock\Client();
+        $mock->addResponse(new Response(201, [], '{"ok":true}'));
+        self::assertSame(['ok' => true], Client::createWithHttpClient($mock)->game()->missions());
+    }
+
+    public function testEmptySuccessfulResponseIsNotConvertedToAnArray(): void
+    {
+        $mock = new \Http\Mock\Client();
+        $mock->addResponse(new Response(204));
+        $this->expectException(ApiResponseErrorException::class);
+        Client::createWithHttpClient($mock)->game()->missions();
+    }
     public function testPassesThroughOn200(): void
     {
         $this->apiClass = \Hyperplural\WarfaceSdk\Api\User::class;

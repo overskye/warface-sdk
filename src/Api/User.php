@@ -6,8 +6,6 @@ namespace Hyperplural\WarfaceSdk\Api;
 
 use Hyperplural\WarfaceSdk\Enum\EntityList;
 
-use function compact;
-
 class User extends AbstractApi implements UserInterface
 {
     public function achievements(string $name): array
